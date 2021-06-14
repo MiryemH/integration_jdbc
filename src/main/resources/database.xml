@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+	<database>
+		<url>jdbc:mysql://localhost:3306/recensement</url>
+		<user>root</user>
+		<pwd></pwd>
+	</database>
+</configuration>
