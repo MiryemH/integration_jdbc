@@ -44,7 +44,7 @@ public class VilleDaoJdbc implements VilleDao {
 							+ "dept.id as dept_id, dept.numero, "
 							+ "reg.id as reg_id, reg.code as reg_code, reg.nom as reg_nom "
 							+ "FROM VILLE vi, DEPARTEMENT dept, REGION reg "
-							+ "WHERE vi.id_dept=dept.id AND vi.id_region=reg.id " + "AND vi.nom=?");
+							+ "WHERE vi.id_dept=dept.id AND vi.id_region=reg.id " + "AND vi.nom=? AND dept.numero=?");
 		} catch (SQLException e) {
 			throw new TechnicalException("Impossible de créer le PreparedStatement de DepartementDaoJdbc", e);
 		}
@@ -60,7 +60,6 @@ public class VilleDaoJdbc implements VilleDao {
 			statInsert.setInt(5, ville.getDepartement().getId());
 
 			statInsert.executeUpdate();
-			System.out.println("Nouvelle ville insérée: " + ville.getNom());
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 			throw new RuntimeException("Une exception grave s'est produite. L'application va s'arrêter.");
@@ -109,13 +108,14 @@ public class VilleDaoJdbc implements VilleDao {
 	}
 
 	@Override
-	public Ville extraireParNom(String nom) {
+	public Ville extraireParNomAndDept(String nom, String numero) {
 
 		Ville selection = null;
 
 		ResultSet res = null;
 		try {
 			statExtractParNom.setString(1, nom);
+			statExtractParNom.setString(2, numero);
 			res = statExtractParNom.executeQuery();
 			if (res.next()) {
 				int id = res.getInt("id_ville");
@@ -128,7 +128,6 @@ public class VilleDaoJdbc implements VilleDao {
 				Region region = new Region(idReg, codeReg, nomReg);
 
 				int idDept = res.getInt("dept_id");
-				String numero = res.getString("numero");
 				Departement dept = new Departement(idDept, numero, region);
 
 				selection = new Ville(id, nom, codeVille, population, dept, region);

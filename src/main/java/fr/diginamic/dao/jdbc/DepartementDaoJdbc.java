@@ -49,7 +49,6 @@ public class DepartementDaoJdbc implements DepartementDao {
 			statInsert.setInt(2, departement.getRegion().getId());
 
 			statInsert.executeUpdate();
-			System.out.println("Nouveau département inséré: " + departement.getNumero());
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 			throw new RuntimeException("Une exception grave s'est produite. L'application va s'arrêter.");
