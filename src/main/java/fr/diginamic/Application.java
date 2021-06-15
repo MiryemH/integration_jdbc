@@ -32,6 +32,9 @@ public class Application {
 		List<Ville> villes = RecensementUtils.lire("C:/Temp/recensement.csv");
 
 		for (Ville ville : villes) {
+
+			System.out.println(ville.getDepartement().getNumero() + " / " + ville.getCode());
+
 			Region region = regionDao.extraireParNom(ville.getRegion().getNom());
 			if (region == null) {
 				regionDao.insert(ville.getRegion());
@@ -52,7 +55,8 @@ public class Application {
 				villeDao.insert(ville);
 			}
 		}
-
+		deptDao.close();
+		regionDao.close();
 	}
 
 }

@@ -12,6 +12,7 @@ import fr.diginamic.dao.VilleDao;
 import fr.diginamic.entites.Departement;
 import fr.diginamic.entites.Region;
 import fr.diginamic.entites.Ville;
+import fr.diginamic.exception.TechnicalException;
 import fr.diginamic.utils.ConnectionMgr;
 
 /**
@@ -22,40 +23,42 @@ import fr.diginamic.utils.ConnectionMgr;
  */
 public class VilleDaoJdbc implements VilleDao {
 
+	private Connection conn = null;
+	private PreparedStatement statInsert = null;
+	private PreparedStatement statExtractAll = null;
+	private PreparedStatement statExtractParNom = null;
+
+	public VilleDaoJdbc() {
+		conn = ConnectionMgr.getConnection();
+		try {
+			statInsert = conn.prepareStatement(
+					"INSERT INTO VILLE (NOM, CODE, POPULATION, ID_REGION, ID_DEPT) VALUES (?,?,?,?,?)");
+			statExtractAll = conn.prepareStatement(
+					"SELECT vi.id as id_ville, vi.code as code_ville, vi.nom as nom_ville, vi.population, "
+							+ "dept.id as dept_id, dept.numero, "
+							+ "reg.id as reg_id, reg.code as reg_code, reg.nom as reg_nom "
+							+ "FROM VILLE vi, DEPARTEMENT dept, REGION reg "
+							+ "WHERE vi.id_dept=dept.id AND vi.id_region=reg.id");
+			statExtractParNom = conn.prepareStatement("SELECT * FROM REGION reg WHERE nom=?");
+		} catch (SQLException e) {
+			throw new TechnicalException("Impossible de créer le PreparedStatement de DepartementDaoJdbc", e);
+		}
+	}
+
 	@Override
 	public void insert(Ville ville) {
-		Connection conn = null;
-		PreparedStatement stat = null;
 		try {
-			conn = ConnectionMgr.getConnection();
-			stat = conn.prepareStatement(
-					"INSERT INTO VILLE (NOM, CODE, POPULATION, ID_REGION, ID_DEPT) VALUES (?,?,?,?,?)");
-			stat.setString(1, ville.getNom());
-			stat.setString(2, ville.getCode());
-			stat.setInt(3, ville.getPopulation());
-			stat.setInt(4, ville.getRegion().getId());
-			stat.setInt(5, ville.getDepartement().getId());
+			statInsert.setString(1, ville.getNom());
+			statInsert.setString(2, ville.getCode());
+			statInsert.setInt(3, ville.getPopulation());
+			statInsert.setInt(4, ville.getRegion().getId());
+			statInsert.setInt(5, ville.getDepartement().getId());
 
-			stat.executeUpdate();
+			statInsert.executeUpdate();
 			System.out.println("Nouvelle ville insérée: " + ville.getNom());
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 			throw new RuntimeException("Une exception grave s'est produite. L'application va s'arrêter.");
-		} finally {
-			try {
-				if (stat != null) {
-					stat.close();
-				}
-			} catch (SQLException e) {
-				System.err.println(e.getMessage());
-			}
-			try {
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				System.err.println(e.getMessage());
-			}
 		}
 	}
 
@@ -63,19 +66,9 @@ public class VilleDaoJdbc implements VilleDao {
 	public List<Ville> extraire() {
 		ArrayList<Ville> villes = new ArrayList<>();
 
-		Connection conn = null;
-		PreparedStatement stat = null;
 		ResultSet res = null;
 		try {
-			conn = ConnectionMgr.getConnection();
-			stat = conn.prepareStatement(
-					"SELECT vi.id as id_ville, vi.code as code_ville, vi.nom as nom_ville, vi.population, "
-							+ "dept.id as dept_id, dept.numero, "
-							+ "reg.id as reg_id, reg.code as reg_code, reg.nom as reg_nom "
-							+ "FROM VILLE vi, DEPARTEMENT dept, REGION reg "
-							+ "WHERE vi.id_dept=dept.id AND vi.id_region=reg.id");
-
-			res = stat.executeQuery();
+			res = statExtractAll.executeQuery();
 			while (res.next()) {
 				int id = res.getInt("id_ville");
 				String codeVille = res.getString("code_ville");
@@ -102,12 +95,6 @@ public class VilleDaoJdbc implements VilleDao {
 			try {
 				if (res != null) {
 					res.close();
-				}
-				if (stat != null) {
-					stat.close();
-				}
-				if (conn != null) {
-					conn.close();
 				}
 			} catch (SQLException e) {
 				System.err.println(e.getMessage());

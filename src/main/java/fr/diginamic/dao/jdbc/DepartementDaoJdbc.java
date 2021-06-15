@@ -11,6 +11,7 @@ import fr.diginamic.dao.DepartementDao;
 import fr.diginamic.dao.RegionDao;
 import fr.diginamic.entites.Departement;
 import fr.diginamic.entites.Region;
+import fr.diginamic.exception.TechnicalException;
 import fr.diginamic.utils.ConnectionMgr;
 
 /**
@@ -21,36 +22,37 @@ import fr.diginamic.utils.ConnectionMgr;
  */
 public class DepartementDaoJdbc implements DepartementDao {
 
+	private Connection conn = null;
+	private PreparedStatement statInsert = null;
+	private PreparedStatement statExtractAll = null;
+	private PreparedStatement statExtractParNumero = null;
+
+	public DepartementDaoJdbc() {
+		conn = ConnectionMgr.getConnection();
+		try {
+			statInsert = conn.prepareStatement("INSERT INTO DEPARTEMENT (NUMERO, ID_REGION) VALUES (?,?)");
+			statExtractAll = conn
+					.prepareStatement("SELECT dept.id as id_dept, dept.numero, reg.id as reg_id, reg.code, reg.nom "
+							+ "FROM DEPARTEMENT dept, REGION reg WHERE dept.id_region=reg.id");
+			statExtractParNumero = conn
+					.prepareStatement("SELECT dept.id as id_dept, dept.numero, reg.id as reg_id, reg.code, reg.nom "
+							+ "FROM DEPARTEMENT dept, REGION reg WHERE dept.id_region=reg.id AND dept.numero=?");
+		} catch (SQLException e) {
+			throw new TechnicalException("Impossible de créer le PreparedStatement de DepartementDaoJdbc", e);
+		}
+	}
+
 	@Override
 	public void insert(Departement departement) {
-		Connection conn = null;
-		PreparedStatement stat = null;
 		try {
-			conn = ConnectionMgr.getConnection();
-			stat = conn.prepareStatement("INSERT INTO DEPARTEMENT (NUMERO, ID_REGION) VALUES (?,?)");
-			stat.setString(1, departement.getNumero());
-			stat.setInt(2, departement.getRegion().getId());
+			statInsert.setString(1, departement.getNumero());
+			statInsert.setInt(2, departement.getRegion().getId());
 
-			stat.executeUpdate();
-			System.out.println("Nouvelle région insérée: " + departement.getNumero());
+			statInsert.executeUpdate();
+			System.out.println("Nouveau département inséré: " + departement.getNumero());
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 			throw new RuntimeException("Une exception grave s'est produite. L'application va s'arrêter.");
-		} finally {
-			try {
-				if (stat != null) {
-					stat.close();
-				}
-			} catch (SQLException e) {
-				System.err.println(e.getMessage());
-			}
-			try {
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				System.err.println(e.getMessage());
-			}
 		}
 	}
 
@@ -58,15 +60,9 @@ public class DepartementDaoJdbc implements DepartementDao {
 	public List<Departement> extraire() {
 		ArrayList<Departement> departements = new ArrayList<>();
 
-		Connection conn = null;
-		PreparedStatement stat = null;
 		ResultSet res = null;
 		try {
-			conn = ConnectionMgr.getConnection();
-			stat = conn.prepareStatement("SELECT dept.id as id_dept, dept.numero, reg.id as reg_id, reg.code, reg.nom "
-					+ "FROM DEPARTEMENT dept, REGION reg WHERE dept.id_region=reg.id");
-
-			res = stat.executeQuery();
+			res = statExtractAll.executeQuery();
 			while (res.next()) {
 				int id = res.getInt("id");
 				String numero = res.getString("numero");
@@ -89,14 +85,8 @@ public class DepartementDaoJdbc implements DepartementDao {
 				if (res != null) {
 					res.close();
 				}
-				if (stat != null) {
-					stat.close();
-				}
-				if (conn != null) {
-					conn.close();
-				}
 			} catch (SQLException e) {
-				System.err.println(e.getMessage());
+				throw new TechnicalException("Impossible de fermer le resultSet", e);
 			}
 		}
 		return departements;
@@ -106,16 +96,10 @@ public class DepartementDaoJdbc implements DepartementDao {
 	public Departement extraireParNumero(String numero) {
 
 		Departement selection = null;
-
-		Connection conn = null;
-		PreparedStatement stat = null;
 		ResultSet res = null;
 		try {
-			conn = ConnectionMgr.getConnection();
-			stat = conn.prepareStatement("SELECT dept.id as id_dept, dept.numero, reg.id as reg_id, reg.code, reg.nom "
-					+ "FROM DEPARTEMENT dept, REGION reg WHERE dept.id_region=reg.id AND dept.numero=?");
-			stat.setString(1, numero);
-			res = stat.executeQuery();
+			statExtractParNumero.setString(1, numero);
+			res = statExtractParNumero.executeQuery();
 			if (res.next()) {
 				int id = res.getInt("id");
 
@@ -135,16 +119,36 @@ public class DepartementDaoJdbc implements DepartementDao {
 				if (res != null) {
 					res.close();
 				}
-				if (stat != null) {
-					stat.close();
-				}
-				if (conn != null) {
-					conn.close();
-				}
 			} catch (SQLException e) {
-				System.err.println(e.getMessage());
+				throw new TechnicalException("Impossible de fermer le resultSet", e);
 			}
 		}
 		return selection;
+	}
+
+	/**
+	 * Fermeture des ressources SQL
+	 * 
+	 * @param conn       connexion
+	 * @param statInsert statement
+	 * @param res        resultset
+	 */
+	public void close() {
+		try {
+			if (statInsert != null) {
+				statInsert.close();
+			}
+			if (statExtractAll != null) {
+				statExtractAll.close();
+			}
+			if (statExtractParNumero != null) {
+				statExtractParNumero.close();
+			}
+			if (conn != null) {
+				conn.close();
+			}
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+		}
 	}
 }
