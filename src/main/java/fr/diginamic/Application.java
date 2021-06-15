@@ -25,6 +25,8 @@ public class Application {
 	 */
 	public static void main(String[] args) {
 
+		long start = System.currentTimeMillis();
+
 		RegionDaoJdbc regionDao = new RegionDaoJdbc();
 		DepartementDaoJdbc deptDao = new DepartementDaoJdbc();
 		VilleDaoJdbc villeDao = new VilleDaoJdbc();
@@ -32,9 +34,6 @@ public class Application {
 		List<Ville> villes = RecensementUtils.lire("C:/Temp/recensement.csv");
 
 		for (Ville ville : villes) {
-
-			System.out.println(ville.getDepartement().getNumero() + " / " + ville.getCode());
-
 			Region region = regionDao.extraireParNom(ville.getRegion().getNom());
 			if (region == null) {
 				regionDao.insert(ville.getRegion());
@@ -47,16 +46,20 @@ public class Application {
 			if (dept == null) {
 				deptDao.insert(ville.getDepartement());
 				dept = deptDao.extraireParNumero(ville.getDepartement().getNumero());
+
+				long end = System.currentTimeMillis();
+				System.out.println((end - start) + " ms.");
 			}
 			ville.setDepartement(dept);
 
-			Ville villeFromBase = villeDao.extraireParNom(ville.getNom());
+			Ville villeFromBase = villeDao.extraireParNomAndDept(ville.getNom(), dept.getNumero());
 			if (villeFromBase == null) {
 				villeDao.insert(ville);
 			}
 		}
-		deptDao.close();
-		regionDao.close();
+
+		long end = System.currentTimeMillis();
+		System.out.println("TRAITEMENT EFFECTUE EN " + (end - start) + " ms.");
 	}
 
 }

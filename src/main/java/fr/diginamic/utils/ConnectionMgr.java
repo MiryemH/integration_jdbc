@@ -80,7 +80,7 @@ public class ConnectionMgr {
 			connPool.setJdbcUrl(url);
 			connPool.setUser(user);
 			connPool.setPassword(pwd);
-			connPool.setMaxPoolSize(10);
+			connPool.setMaxPoolSize(25);
 
 		} catch (ConfigurationException e) {
 			throw new TechnicalException("Impossible de lire la configuration de l'application", e);

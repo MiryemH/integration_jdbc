@@ -27,11 +27,13 @@ public interface VilleDao {
 	void insert(Ville ville);
 
 	/**
-	 * Extrait la ville dont le nom est passé en paramètre
+	 * Extrait la ville dont le nom et le numéro de département sont passés en
+	 * paramètre
 	 * 
-	 * @param nom nom de la ville
+	 * @param nom    nom de la ville
+	 * @param numero numéro de département
 	 * @return {@link Ville}
 	 */
-	Ville extraireParNom(String nom);
+	Ville extraireParNomAndDept(String nom, String numero);
 
 }

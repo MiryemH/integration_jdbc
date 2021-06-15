@@ -9,7 +9,6 @@ import java.util.List;
 
 import fr.diginamic.dao.RegionDao;
 import fr.diginamic.entites.Region;
-import fr.diginamic.exception.TechnicalException;
 import fr.diginamic.utils.ConnectionMgr;
 
 /**
@@ -18,36 +17,26 @@ import fr.diginamic.utils.ConnectionMgr;
  * @author DIGINAMIC
  *
  */
-public class RegionDaoJdbc implements RegionDao {
-
-	private Connection conn = null;
-	private PreparedStatement statInsert = null;
-	private PreparedStatement statExtractAll = null;
-	private PreparedStatement statExtractParNom = null;
-
-	public RegionDaoJdbc() {
-		conn = ConnectionMgr.getConnection();
-		try {
-			statInsert = conn.prepareStatement("INSERT INTO REGION (NOM, CODE) VALUES (?,?)");
-			statExtractAll = conn.prepareStatement("SELECT * FROM REGION");
-			statExtractParNom = conn.prepareStatement("SELECT * FROM REGION reg WHERE nom=?");
-		} catch (SQLException e) {
-			throw new TechnicalException("Impossible de créer le PreparedStatement de DepartementDaoJdbc", e);
-		}
-	}
+public class RegionDaoJdbc extends AbstractDaoJdbc implements RegionDao {
 
 	@Override
 	public void insert(Region region) {
+		Connection conn = null;
+		PreparedStatement stat = null;
 		try {
-			statInsert.setString(1, region.getNom());
-			statInsert.setString(2, region.getCode());
+			conn = ConnectionMgr.getConnection();
+			stat = conn.prepareStatement("INSERT INTO REGION (NOM, CODE) VALUES (?,?)");
+			stat.setString(1, region.getNom());
+			stat.setString(2, region.getCode());
 
-			statInsert.executeUpdate();
+			stat.executeUpdate();
 			System.out.println("Nouvelle région insérée: " + region.getNom());
 
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 			throw new RuntimeException("Une exception grave s'est produite. L'application va s'arrêter.");
+		} finally {
+			closeResources(conn, stat);
 		}
 	}
 
@@ -55,9 +44,14 @@ public class RegionDaoJdbc implements RegionDao {
 	public List<Region> extraire() {
 		ArrayList<Region> regions = new ArrayList<>();
 
+		Connection conn = null;
+		PreparedStatement stat = null;
 		ResultSet res = null;
 		try {
-			res = statExtractAll.executeQuery();
+			conn = ConnectionMgr.getConnection();
+			stat = conn.prepareStatement("SELECT * FROM REGION");
+
+			res = stat.executeQuery();
 			while (res.next()) {
 				int id = res.getInt("id");
 				String code = res.getString("code");
@@ -71,13 +65,7 @@ public class RegionDaoJdbc implements RegionDao {
 			System.err.println(e.getMessage());
 			throw new RuntimeException("Une exception grave s'est produite. L'application va s'arrêter.");
 		} finally {
-			try {
-				if (res != null) {
-					res.close();
-				}
-			} catch (SQLException e) {
-				System.err.println(e.getMessage());
-			}
+			closeResources(conn, stat, res);
 		}
 		return regions;
 	}
@@ -87,10 +75,14 @@ public class RegionDaoJdbc implements RegionDao {
 
 		Region selection = null;
 
+		Connection conn = null;
+		PreparedStatement stat = null;
 		ResultSet res = null;
 		try {
-			statExtractParNom.setString(1, nom);
-			res = statExtractParNom.executeQuery();
+			conn = ConnectionMgr.getConnection();
+			stat = conn.prepareStatement("SELECT * FROM REGION reg WHERE nom=?");
+			stat.setString(1, nom);
+			res = stat.executeQuery();
 			if (res.next()) {
 				int id = res.getInt("id");
 				String code = res.getString("code");
@@ -102,40 +94,8 @@ public class RegionDaoJdbc implements RegionDao {
 			System.err.println(e.getMessage());
 			throw new RuntimeException("Une exception grave s'est produite. L'application va s'arrêter.");
 		} finally {
-			try {
-				if (res != null) {
-					res.close();
-				}
-			} catch (SQLException e) {
-				System.err.println(e.getMessage());
-			}
+			closeResources(conn, stat, res);
 		}
 		return selection;
-	}
-
-	/**
-	 * Fermeture des ressources SQL
-	 * 
-	 * @param conn       connexion
-	 * @param statInsert statement
-	 * @param res        resultset
-	 */
-	public void close() {
-		try {
-			if (statInsert != null) {
-				statInsert.close();
-			}
-			if (statExtractAll != null) {
-				statExtractAll.close();
-			}
-			if (statExtractParNom != null) {
-				statExtractParNom.close();
-			}
-			if (conn != null) {
-				conn.close();
-			}
-		} catch (SQLException e) {
-			System.err.println(e.getMessage());
-		}
 	}
 }
