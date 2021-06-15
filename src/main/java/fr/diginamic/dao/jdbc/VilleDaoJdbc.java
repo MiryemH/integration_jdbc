@@ -39,7 +39,12 @@ public class VilleDaoJdbc implements VilleDao {
 							+ "reg.id as reg_id, reg.code as reg_code, reg.nom as reg_nom "
 							+ "FROM VILLE vi, DEPARTEMENT dept, REGION reg "
 							+ "WHERE vi.id_dept=dept.id AND vi.id_region=reg.id");
-			statExtractParNom = conn.prepareStatement("SELECT * FROM REGION reg WHERE nom=?");
+			statExtractParNom = conn.prepareStatement(
+					"SELECT vi.id as id_ville, vi.code as code_ville, vi.nom as nom_ville, vi.population, "
+							+ "dept.id as dept_id, dept.numero, "
+							+ "reg.id as reg_id, reg.code as reg_code, reg.nom as reg_nom "
+							+ "FROM VILLE vi, DEPARTEMENT dept, REGION reg "
+							+ "WHERE vi.id_dept=dept.id AND vi.id_region=reg.id " + "AND vi.nom=?");
 		} catch (SQLException e) {
 			throw new TechnicalException("Impossible de créer le PreparedStatement de DepartementDaoJdbc", e);
 		}
@@ -108,19 +113,10 @@ public class VilleDaoJdbc implements VilleDao {
 
 		Ville selection = null;
 
-		Connection conn = null;
-		PreparedStatement stat = null;
 		ResultSet res = null;
 		try {
-			conn = ConnectionMgr.getConnection();
-			stat = conn.prepareStatement(
-					"SELECT vi.id as id_ville, vi.code as code_ville, vi.nom as nom_ville, vi.population, "
-							+ "dept.id as dept_id, dept.numero, "
-							+ "reg.id as reg_id, reg.code as reg_code, reg.nom as reg_nom "
-							+ "FROM VILLE vi, DEPARTEMENT dept, REGION reg "
-							+ "WHERE vi.id_dept=dept.id AND vi.id_region=reg.id " + "AND vi.nom=?");
-			stat.setString(1, nom);
-			res = stat.executeQuery();
+			statExtractParNom.setString(1, nom);
+			res = statExtractParNom.executeQuery();
 			if (res.next()) {
 				int id = res.getInt("id_ville");
 				String codeVille = res.getString("code_ville");
@@ -146,16 +142,36 @@ public class VilleDaoJdbc implements VilleDao {
 				if (res != null) {
 					res.close();
 				}
-				if (stat != null) {
-					stat.close();
-				}
-				if (conn != null) {
-					conn.close();
-				}
 			} catch (SQLException e) {
 				System.err.println(e.getMessage());
 			}
 		}
 		return selection;
+	}
+
+	/**
+	 * Fermeture des ressources SQL
+	 * 
+	 * @param conn       connexion
+	 * @param statInsert statement
+	 * @param res        resultset
+	 */
+	public void close() {
+		try {
+			if (statInsert != null) {
+				statInsert.close();
+			}
+			if (statExtractAll != null) {
+				statExtractAll.close();
+			}
+			if (statExtractParNom != null) {
+				statExtractParNom.close();
+			}
+			if (conn != null) {
+				conn.close();
+			}
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+		}
 	}
 }
